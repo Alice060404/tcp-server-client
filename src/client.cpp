@@ -1,17 +1,19 @@
 #include <arpa/inet.h>
 #include <array>
 #include <cstddef>
+#include <iostream>
 #include <netinet/in.h>
 #include <strings.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <iostream>
-
 #include "common.cpp"
 
 constexpr std::size_t BUFFER_SIZE = 1024;
+constexpr std::size_t PORT = 8888;
+constexpr const char *IP = "127.0.0.1";
 
 int main()
 {
@@ -21,8 +23,8 @@ int main()
     sockaddr_in serverAddr;
     bzero(&serverAddr, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    serverAddr.sin_port = htons(8888);
+    serverAddr.sin_addr.s_addr = inet_addr(IP);
+    serverAddr.sin_port = htons(PORT);
 
     std::cout << "Connecting to server..." << '\n';
     common::exception::throw_if(connect(sockFd, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)),
