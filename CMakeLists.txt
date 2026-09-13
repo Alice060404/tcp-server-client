@@ -7,31 +7,29 @@ project(
 )
 
 # C++ 标准
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-# 生成 compile_commands.json
-# 对 clangd / Neovim 很有用
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# 服务端
-add_executable(server
-    src/server.cpp
+add_library(network
+    src/InetAddress.cpp
+    src/epoll.cpp
+    src/socket.cpp
 )
 
-# 客户端
-add_executable(client
-    src/client.cpp
-)
+target_compile_features(network PUBLIC cxx_std_20)
+target_include_directories(network PUBLIC include)
 
-target_include_directories(server PRIVATE include)
-target_include_directories(client PRIVATE include)
+add_executable(server src/server.cpp)
+target_link_libraries(server PRIVATE network)
 
-if(MSVC)
-    target_compile_options(server PRIVATE /W4)
-    target_compile_options(client PRIVATE /W4)
-else()
-    target_compile_options(server PRIVATE -Wall -Wextra -Wpedantic)
-    target_compile_options(client PRIVATE -Wall -Wextra -Wpedantic)
-endif()
+add_executable(client src/client.cpp)
+target_link_libraries(client PRIVATE network)
+
+foreach(target IN ITEMS network server client)
+    set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
+
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /W4)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+endforeach()

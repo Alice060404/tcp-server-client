@@ -3,109 +3,57 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstring>
-#include <fcntl.h>
 #include <iostream>
 #include <netinet/in.h>
-#include <strings.h>
 #include <sys/epoll.h>
-#include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <vector>
 
+#include "../include/InetAddress.hpp"
+#include "../include/epoll.hpp"
+#include "../include/socket.hpp"
 #include "common.cpp"
 
 constexpr std::size_t BUFFER_SIZE = 1024;
-constexpr std::size_t MAX_EVENTS = 1024;
 constexpr std::size_t PORT = 8888;
 constexpr const char *IP = "127.0.0.1";
 
-void setnonblocking(int fd)
-{
-    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
-}
+void handleReadEvent(int sockfd);
 
 int main()
 {
-    int sockFd = socket(AF_INET, SOCK_STREAM, 0);
-    common::exception::throw_if(sockFd == -1, "Failed to sock.");
+    Socket *serverSock = new Socket();
+    InetAddress *serverAddr = new InetAddress(IP, PORT);
 
-    sockaddr_in serverAddr;
-    bzero(&serverAddr, sizeof(serverAddr));
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_addr.s_addr = inet_addr(IP);
-    serverAddr.sin_port = htons(PORT);
+    serverSock->bind(serverAddr);
+    serverSock->listen();
 
-    common::exception::throw_if(bind(sockFd, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) == -1,
-                                "Failed to bind.");
-
-    common::exception::throw_if(listen(sockFd, SOMAXCONN) == -1, "Failed to listen.");
-
-    int epollFd = epoll_create1(0);
-    common::exception::throw_if(epollFd == -1, "Epoll create error.");
-
-    epoll_event events[MAX_EVENTS], ev;
-    bzero(&events, sizeof(events));
-
-    bzero(&ev, sizeof(ev));
-    ev.data.fd = sockFd;
-    ev.events = EPOLLIN | EPOLLET;
-    setnonblocking(sockFd);
-    epoll_ctl(epollFd, EPOLL_CTL_ADD, sockFd, &ev);
+    Epoll *ep = new Epoll();
+    serverSock->setnonblocking();
+    ep->addFd(serverSock->getFd(), EPOLLIN | EPOLLET);
 
     while (true)
     {
-        int nfds = epoll_wait(epollFd, events, MAX_EVENTS, -1);
-        common::exception::throw_if(nfds == -1, "Epoll wait error.");
+        std::vector<epoll_event> events = ep->poll();
+        int nfds = events.size();
 
         for (int i = 0; i < nfds; ++i)
         {
-            if (events[i].data.fd == sockFd)
+            if (events[i].data.fd == serverSock->getFd())
             {
-                sockaddr_in clientAddr;
-                socklen_t clientAddrLen = sizeof(clientAddr);
-                bzero(&clientAddr, sizeof(clientAddr));
+                InetAddress *clientAddr = new InetAddress();
+                Socket *clientSock = new Socket(serverSock->accept(clientAddr));
 
-                int clientSockFd = accept(sockFd, reinterpret_cast<sockaddr *>(&clientAddr), &clientAddrLen);
-                common::exception::throw_if(clientSockFd == -1, "Sock accept error.");
-                std::cout << "New client Fd: " << clientSockFd << " IP: " << inet_ntoa(clientAddr.sin_addr)
-                          << " Port: " << ntohs(clientAddr.sin_port) << ".\n";
+                std::cout << "New client Fd: " << clientSock->getFd() << " IP: " << inet_ntoa(clientAddr->addr.sin_addr)
+                          << " Port: " << ntohs(clientAddr->addr.sin_port) << ".\n";
 
-                bzero(&ev, sizeof(ev));
-                ev.data.fd = clientSockFd;
-                ev.events = EPOLLIN | EPOLLET;
-                setnonblocking(clientSockFd);
-                epoll_ctl(epollFd, EPOLL_CTL_ADD, clientSockFd, &ev);
+                clientSock->setnonblocking();
+                ep->addFd(clientSock->getFd(), EPOLLIN | EPOLLET);
             }
             else if (events[i].events & EPOLLIN)
             {
-                std::array<char, BUFFER_SIZE> buffer{};
-                while (true)
-                {
-                    buffer = {};
-
-                    const ssize_t readBytes = read(events[i].data.fd, buffer.data(), buffer.size());
-                    if (readBytes > 0)
-                    {
-                        std::cout << "Msg from client fd " << events[i].data.fd << ": " << buffer.data() << '\n';
-                        write(events[i].data.fd, buffer.data(), buffer.size());
-                    }
-                    else if (readBytes == 0)
-                    {
-                        std::cout << "Client fd " << events[i].data.fd << " disconnect.\n";
-                        close(events[i].data.fd);
-                        break;
-                    }
-                    else if (readBytes == -1 && errno == EINTR)
-                    {
-                        std::cout << "Continue read.\n";
-                        continue;
-                    }
-                    else if (readBytes == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
-                    {
-                        std::cout << "Finish reading once, errno: " << errno << '\n';
-                        break;
-                    }
-                }
+                handleReadEvent(events[i].data.fd);
             }
             else
             {
@@ -114,6 +62,39 @@ int main()
         }
     }
 
-    close(sockFd);
+    delete serverSock;
+    delete serverAddr;
     return 0;
+}
+
+void handleReadEvent(int sockfd)
+{
+    std::array<char, BUFFER_SIZE> buffer{};
+    while (true)
+    {
+        buffer = {};
+
+        const ssize_t readBytes = read(sockfd, buffer.data(), buffer.size());
+        if (readBytes > 0)
+        {
+            std::cout << "Msg from client fd " << sockfd << ": " << buffer.data() << '\n';
+            write(sockfd, buffer.data(), buffer.size());
+        }
+        else if (readBytes == 0)
+        {
+            std::cout << "Client fd " << sockfd << " disconnect.\n";
+            close(sockfd);
+            break;
+        }
+        else if (readBytes == -1 && errno == EINTR)
+        {
+            std::cout << "Continue read.\n";
+            continue;
+        }
+        else if (readBytes == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
+        {
+            std::cout << "Finish reading once, errno: " << errno << '\n';
+            break;
+        }
+    }
 }
