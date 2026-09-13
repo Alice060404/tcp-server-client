@@ -11,9 +11,10 @@
 #include <vector>
 
 #include "../include/InetAddress.hpp"
+#include "../include/channel.hpp"
+#include "../include/common.hpp"
 #include "../include/epoll.hpp"
 #include "../include/socket.hpp"
-#include "common.cpp"
 
 constexpr std::size_t BUFFER_SIZE = 1024;
 constexpr std::size_t PORT = 8888;
@@ -31,16 +32,18 @@ int main()
 
     Epoll *ep = new Epoll();
     serverSock->setnonblocking();
-    ep->addFd(serverSock->getFd(), EPOLLIN | EPOLLET);
+    Channel *servChannel = new Channel(ep, serverSock->getFd());
+    servChannel->enableReading();
 
     while (true)
     {
-        std::vector<epoll_event> events = ep->poll();
-        int nfds = events.size();
+        std::vector<Channel *> activeChannels = ep->poll();
+        int nfds = activeChannels.size();
 
         for (int i = 0; i < nfds; ++i)
         {
-            if (events[i].data.fd == serverSock->getFd())
+            int channelFd = activeChannels[i]->getFd();
+            if (channelFd == serverSock->getFd())
             {
                 InetAddress *clientAddr = new InetAddress();
                 Socket *clientSock = new Socket(serverSock->accept(clientAddr));
@@ -49,11 +52,12 @@ int main()
                           << " Port: " << ntohs(clientAddr->addr.sin_port) << ".\n";
 
                 clientSock->setnonblocking();
-                ep->addFd(clientSock->getFd(), EPOLLIN | EPOLLET);
+                Channel *clntChannel = new Channel(ep, clientSock->getFd());
+                clntChannel->enableReading();
             }
-            else if (events[i].events & EPOLLIN)
+            else if (activeChannels[i]->getRevents() & EPOLLIN)
             {
-                handleReadEvent(events[i].data.fd);
+                handleReadEvent(activeChannels[i]->getFd());
             }
             else
             {

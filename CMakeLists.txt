@@ -13,6 +13,8 @@ add_library(network
     src/InetAddress.cpp
     src/epoll.cpp
     src/socket.cpp
+    src/channel.cpp
+    src/common.cpp
 )
 
 target_compile_features(network PUBLIC cxx_std_20)

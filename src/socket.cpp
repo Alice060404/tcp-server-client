@@ -3,8 +3,8 @@
 #include <unistd.h>
 
 #include "../include/InetAddress.hpp"
+#include "../include/common.hpp"
 #include "../include/socket.hpp"
-#include "../src/common.cpp"
 
 Socket::Socket() : fd(-1)
 {

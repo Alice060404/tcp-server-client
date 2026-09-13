@@ -6,8 +6,8 @@
 #include <unistd.h>
 
 #include "../include/InetAddress.hpp"
+#include "../include/common.hpp"
 #include "../include/socket.hpp"
-#include "common.cpp"
 
 constexpr std::size_t BUFFER_SIZE = 1024;
 constexpr std::size_t PORT = 8888;

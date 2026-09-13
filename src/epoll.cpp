@@ -1,12 +1,14 @@
 #include "../include/epoll.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <netinet/in.h>
 #include <strings.h>
 #include <sys/epoll.h>
 #include <unistd.h>
 #include <vector>
 
-#include "common.cpp"
+#include "../include/channel.hpp"
+#include "../include/common.hpp"
 
 constexpr std::size_t MAX_EVENTS = 1024;
 
@@ -39,14 +41,35 @@ void Epoll::addFd(int fd, uint32_t op)
     common::exception::throw_if(epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev) == -1, "epoll add event error.");
 }
 
-std::vector<epoll_event> Epoll::poll(int timeout)
+void Epoll::updateChannel(Channel *channel)
 {
-    std::vector<epoll_event> activeEvents;
+    int ChannelFd = channel->getFd();
+    epoll_event ev;
+    bzero(&ev, sizeof(ev));
+    ev.data.ptr = channel;
+    ev.events = channel->getEvents();
+
+    if (!channel->getInepoll())
+    {
+        common::exception::throw_if(epoll_ctl(epollFd, EPOLL_CTL_ADD, ChannelFd, &ev) == -1, "Epoll add error.");
+        channel->setInepoll();
+    }
+    else
+    {
+        common::exception::throw_if(epoll_ctl(epollFd, EPOLL_CTL_MOD, ChannelFd, &ev) == -1, "Epoll modify error.");
+    }
+}
+
+std::vector<Channel *> Epoll::poll(int timeout)
+{
+    std::vector<Channel *> activeEvents;
     int nfds = epoll_wait(epollFd, events, MAX_EVENTS, timeout);
     common::exception::throw_if(nfds == -1, "Epoll wait error");
     for (int i = 0; i < nfds; ++i)
     {
-        activeEvents.push_back(events[i]);
+        Channel *channel = (Channel *)events[i].data.ptr;
+        channel->setRevents(events[i].events);
+        activeEvents.push_back(channel);
     }
     return activeEvents;
 }
