@@ -1,8 +1,8 @@
 #include <cstdint>
 #include <sys/epoll.h>
 
-#include "../include/channel.hpp"
-#include "../include/epoll.hpp"
+#include "../include/Channel.hpp"
+#include "../include/Epoll.hpp"
 
 Channel::Channel(Epoll *_ep, int _fd) : ep(_ep), fd(_fd), events(0), revents(0), inEpoll(false)
 {

@@ -11,9 +11,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_library(network
     src/InetAddress.cpp
-    src/epoll.cpp
-    src/socket.cpp
-    src/channel.cpp
+    src/Epoll.cpp
+    src/Socket.cpp
+    src/Channel.cpp
     src/common.cpp
 )
 

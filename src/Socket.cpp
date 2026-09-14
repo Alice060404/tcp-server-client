@@ -4,7 +4,7 @@
 
 #include "../include/InetAddress.hpp"
 #include "../include/common.hpp"
-#include "../include/socket.hpp"
+#include "../include/Socket.hpp"
 
 Socket::Socket() : fd(-1)
 {

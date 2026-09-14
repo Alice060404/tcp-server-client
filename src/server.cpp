@@ -11,10 +11,10 @@
 #include <vector>
 
 #include "../include/InetAddress.hpp"
-#include "../include/channel.hpp"
+#include "../include/Channel.hpp"
 #include "../include/common.hpp"
-#include "../include/epoll.hpp"
-#include "../include/socket.hpp"
+#include "../include/Epoll.hpp"
+#include "../include/Socket.hpp"
 
 constexpr std::size_t BUFFER_SIZE = 1024;
 constexpr std::size_t PORT = 8888;

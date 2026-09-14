@@ -1,4 +1,4 @@
-#include "../include/epoll.hpp"
+#include "../include/Epoll.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <netinet/in.h>
@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <vector>
 
-#include "../include/channel.hpp"
+#include "../include/Channel.hpp"
 #include "../include/common.hpp"
 
 constexpr std::size_t MAX_EVENTS = 1024;
