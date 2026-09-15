@@ -2,9 +2,9 @@
 #include <functional>
 #include <sys/epoll.h>
 
-#include "../include/Channel.hpp"
-#include "../include/Epoll.hpp"
-#include "../include/EventLoop.hpp"
+#include "Channel.hpp"
+#include "Epoll.hpp"
+#include "EventLoop.hpp"
 
 Channel::Channel(EventLoop *_loop, int _fd) : loop(_loop), fd(_fd), events(0), revents(0), inEpoll(false)
 {

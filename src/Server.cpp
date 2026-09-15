@@ -6,10 +6,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "../include/Channel.hpp"
-#include "../include/InetAddress.hpp"
-#include "../include/Server.hpp"
-#include "../include/Socket.hpp"
+#include "Channel.hpp"
+#include "InetAddress.hpp"
+#include "Server.hpp"
+#include "Socket.hpp"
 
 constexpr std::size_t BUFFER_SIZE = 1024;
 constexpr std::size_t PORT = 8888;

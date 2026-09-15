@@ -2,7 +2,7 @@
 #include "Epoll.hpp"
 #include <vector>
 
-#include "../include/EventLoop.hpp"
+#include "EventLoop.hpp"
 
 EventLoop::EventLoop() : ep(nullptr), quit(false)
 {

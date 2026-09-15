@@ -6,7 +6,6 @@ project(
     LANGUAGES CXX
 )
 
-# C++ 标准
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_library(network

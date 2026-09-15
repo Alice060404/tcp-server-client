@@ -6,9 +6,9 @@
 #include <unistd.h>
 #include <vector>
 
-#include "../include/Channel.hpp"
-#include "../include/Epoll.hpp"
-#include "../include/common.hpp"
+#include "Channel.hpp"
+#include "Epoll.hpp"
+#include "common.hpp"
 
 constexpr std::size_t MAX_EVENTS = 1024;
 

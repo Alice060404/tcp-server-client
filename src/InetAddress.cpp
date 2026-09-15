@@ -4,7 +4,7 @@
 #include <strings.h>
 #include <sys/socket.h>
 
-#include "../include/InetAddress.hpp"
+#include "InetAddress.hpp"
 
 InetAddress::InetAddress() : addrLen(sizeof(addr))
 {
