@@ -14,16 +14,20 @@ add_library(network
     src/Epoll.cpp
     src/Socket.cpp
     src/Channel.cpp
+    src/EventLoop.cpp
     src/common.cpp
 )
 
 target_compile_features(network PUBLIC cxx_std_20)
 target_include_directories(network PUBLIC include)
 
-add_executable(server src/server.cpp)
+add_executable(server
+    server.cpp
+    src/Server.cpp
+)
 target_link_libraries(server PRIVATE network)
 
-add_executable(client src/client.cpp)
+add_executable(client client.cpp)
 target_link_libraries(client PRIVATE network)
 
 foreach(target IN ITEMS network server client)

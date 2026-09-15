@@ -1,10 +1,12 @@
 #include <cstdint>
+#include <functional>
 #include <sys/epoll.h>
 
 #include "../include/Channel.hpp"
 #include "../include/Epoll.hpp"
+#include "../include/EventLoop.hpp"
 
-Channel::Channel(Epoll *_ep, int _fd) : ep(_ep), fd(_fd), events(0), revents(0), inEpoll(false)
+Channel::Channel(EventLoop *_loop, int _fd) : loop(_loop), fd(_fd), events(0), revents(0), inEpoll(false)
 {
 }
 
@@ -15,7 +17,7 @@ Channel::~Channel()
 void Channel::enableReading()
 {
     events = EPOLLIN | EPOLLET;
-    ep->updateChannel(this);
+    loop->updateChannel(this);
 }
 
 int Channel::getFd() const
@@ -46,4 +48,14 @@ void Channel::setInepoll()
 void Channel::setRevents(uint32_t _ev)
 {
     revents = _ev;
+}
+
+void Channel::handleEvent()
+{
+    callback();
+}
+
+void Channel::setCallback(std::function<void()> _cb)
+{
+    callback = _cb;
 }

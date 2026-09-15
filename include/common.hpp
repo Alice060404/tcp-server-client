@@ -1,4 +1,7 @@
+#pragma once
+
 #include <string_view>
+
 namespace common
 {
 namespace exception
