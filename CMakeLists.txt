@@ -23,13 +23,17 @@ target_include_directories(network PUBLIC include)
 add_executable(server
     server.cpp
     src/Server.cpp
+    src/Acceptor.cpp
 )
 target_link_libraries(server PRIVATE network)
 
 add_executable(client client.cpp)
 target_link_libraries(client PRIVATE network)
 
-foreach(target IN ITEMS network server client)
+add_executable(tcp_test tests/tcp_test.cpp)
+target_link_libraries(tcp_test PRIVATE network)
+
+foreach(target IN ITEMS network server client tcp_test)
     set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
 
     if(MSVC)

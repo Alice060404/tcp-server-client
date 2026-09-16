@@ -6,31 +6,24 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "Acceptor.hpp"
 #include "Channel.hpp"
 #include "InetAddress.hpp"
 #include "Server.hpp"
 #include "Socket.hpp"
 
 constexpr std::size_t BUFFER_SIZE = 1024;
-constexpr std::size_t PORT = 8888;
-constexpr const char *IP = "127.0.0.1";
 
-Server::Server(EventLoop *_loop) : loop(_loop)
+Server::Server(EventLoop *_loop) : loop(_loop), acceptor(nullptr)
 {
-    Socket *serverSock = new Socket();
-    InetAddress *serverAddr = new InetAddress(IP, PORT);
-    serverSock->bind(serverAddr);
-    serverSock->listen();
-    serverSock->setnonblocking();
-
-    Channel *servChannel = new Channel(loop, serverSock->getFd());
-    std::function<void()> cb = std::bind(&Server::newConnection, this, serverSock);
-    servChannel->setCallback(cb);
-    servChannel->enableReading();
+    acceptor = new Acceptor(loop);
+    std::function<void(Socket *)> cb = std::bind(&Server::newConnection, this, std::placeholders::_1);
+    acceptor->setNewConnectionCallback(cb);
 }
 
 Server::~Server()
 {
+    delete acceptor;
 }
 
 void Server::handleReadEvent(int sockFd)

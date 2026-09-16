@@ -29,10 +29,11 @@ cmake -S . -B build
 cmake --build build
 ```
 
-构建完成后，可执行文件位于 `build/` 目录：
+构建完成后，可执行文件位于 `build/` ：
 
 - `build/server`
 - `build/client`
+- `build/tcp_test`
 
 ## 使用
 
@@ -55,3 +56,23 @@ Msg from server: Hello
 ```
 
 可启动多个客户端进行连接测试。按 `Ctrl+C` 结束程序。
+
+## 测试
+
+`tcp_test` 使用 C++ 标准库和 Linux socket API。
+
+启动服务端，监听 `127.0.0.1:8888`，测试期间保持运行。
+
+```bash
+./build/server
+```
+
+运行测试程序，无需另外启动 `client` 或手动输入消息。
+
+```bash
+./build/tcp_test
+```
+
+若提示 `Connection refused`，先确认服务端已成功启动。测试完成后，在终端一按 `Ctrl+C` 停止服务端。
+
+收发超时为 2 秒。测试使用当前客户端的 1024 字节补零缓冲区格式，不覆盖任意长度消息、并发连接压力或交互式客户端的终端输入。
