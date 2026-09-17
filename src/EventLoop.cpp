@@ -1,7 +1,7 @@
-#include "Channel.hpp"
-#include "Epoll.hpp"
 #include <vector>
 
+#include "Channel.hpp"
+#include "Epoll.hpp"
 #include "EventLoop.hpp"
 
 EventLoop::EventLoop() : ep(nullptr), quit(false)

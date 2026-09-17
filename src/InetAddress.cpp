@@ -20,3 +20,13 @@ InetAddress::InetAddress(const char *ip, std::size_t port) : addrLen(sizeof(addr
 }
 
 InetAddress::~InetAddress() {};
+
+sockaddr_in InetAddress::getAddr() const
+{
+    return addr;
+}
+
+socklen_t InetAddress::getAddrLen() const
+{
+    return addrLen;
+}

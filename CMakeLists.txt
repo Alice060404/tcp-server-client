@@ -24,6 +24,7 @@ add_executable(server
     server.cpp
     src/Server.cpp
     src/Acceptor.cpp
+    src/Connection.cpp
 )
 target_link_libraries(server PRIVATE network)
 

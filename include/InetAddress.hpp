@@ -12,6 +12,8 @@ class InetAddress
 
     InetAddress();
     InetAddress(const char *ip, std::size_t port);
-
     ~InetAddress();
+
+    sockaddr_in getAddr() const;
+    socklen_t getAddrLen() const;
 };
