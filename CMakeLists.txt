@@ -15,6 +15,7 @@ add_library(network
     src/Channel.cpp
     src/EventLoop.cpp
     src/common.cpp
+    src/Buffer.cpp
 )
 
 target_compile_features(network PUBLIC cxx_std_20)

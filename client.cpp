@@ -1,13 +1,14 @@
 #include <array>
 #include <cstddef>
+#include <cstdlib>
 #include <iostream>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "Buffer.hpp"
 #include "InetAddress.hpp"
 #include "Socket.hpp"
-#include "common.hpp"
 
 constexpr std::size_t BUFFER_SIZE = 1024;
 constexpr std::size_t PORT = 8888;
@@ -17,44 +18,50 @@ int main()
 {
 
     Socket *clientSock = new Socket();
-
     InetAddress *serverAddr = new InetAddress(IP, PORT);
+    clientSock->connect(serverAddr);
 
-    std::cout << "Connecting to server..." << '\n';
-    common::exception::throw_if(
-        connect(clientSock->getFd(), reinterpret_cast<sockaddr *>(&serverAddr->addr), serverAddr->addrLen) == -1,
-        "Failed to connect.");
-    std::cout << "Connect to server successfully." << '\n';
+    int sockFd = clientSock->getFd();
+
+    Buffer *sendBuffer = new Buffer();
+    Buffer *readBuffer = new Buffer();
 
     while (true)
     {
-        std::array<char, BUFFER_SIZE> buffer{};
-        std::cin.getline(buffer.data(), buffer.size());
-
-        const ssize_t writeBytes = write(clientSock->getFd(), buffer.data(), buffer.size());
+        sendBuffer->getline();
+        const ssize_t writeBytes = write(sockFd, sendBuffer->c_str(), sendBuffer->size());
         if (writeBytes == -1)
         {
-            common::exception::throw_if(true, "Sock already disconnect, can not write.");
+            std::cout << "Sock already disconnect, can not write.\n";
             break;
         }
 
-        buffer = {};
-        const ssize_t readBytes = read(clientSock->getFd(), buffer.data(), buffer.size());
-        if (readBytes > 0)
+        int alreadyRead = 0;
+        std::array<char, BUFFER_SIZE> buf{};
+        while (true)
         {
-            std::cout << "Msg from server: " << buffer.data() << '\n';
-        }
-        else if (readBytes == 0)
-        {
-            std::cout << "Server disconnect.\n";
-            break;
-        }
-        else if (readBytes == -1)
-        {
-            common::exception::throw_if(true, "Sock read error.");
-            delete clientSock;
+            buf = {};
+            const ssize_t readBytes = read(sockFd, buf.data(), buf.size());
+            if (readBytes > 0)
+            {
+                readBuffer->append(buf.data(), buf.size());
+                alreadyRead += readBytes;
+            }
+            else if (readBytes == 0)
+            {
+                std::cout << "Server disconnect.\n";
+                exit(EXIT_SUCCESS);
+            }
+            if (alreadyRead >= readBuffer->size())
+            {
+                std::cout << "Msg from server: " << readBuffer->c_str() << '\n';
+                break;
+            }
+            readBuffer->clear();
         }
     }
     delete clientSock;
+    delete serverAddr;
+
     return 0;
 }

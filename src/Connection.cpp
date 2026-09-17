@@ -1,7 +1,3 @@
-#include "Connection.hpp"
-#include "Channel.hpp"
-#include "EventLoop.hpp"
-#include "Socket.hpp"
 #include <array>
 #include <cstddef>
 #include <functional>
@@ -9,14 +5,23 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "Buffer.hpp"
+#include "Channel.hpp"
+#include "Connection.hpp"
+#include "EventLoop.hpp"
+#include "Socket.hpp"
+#include "common.hpp"
+
 constexpr std::size_t BUFFER_SIZE = 1024;
 
-Connection::Connection(EventLoop *_loop, Socket *_sock) : loop(_loop), sock(_sock)
+Connection::Connection(EventLoop *_loop, Socket *_sock)
+    : loop(_loop), sock(_sock), inBuffer(new std::string()), readBuffer(nullptr)
 {
     channel = new Channel(loop, sock->getFd());
     std::function<void()> cb = std::bind(&Connection::echo, this, sock->getFd());
     channel->setCallback(cb);
     channel->enableReading();
+    readBuffer = new Buffer();
 }
 
 Connection::~Connection()
@@ -35,8 +40,7 @@ void Connection::echo(int sockFd)
         const ssize_t readBytes = read(sockFd, buffer.data(), buffer.size());
         if (readBytes > 0)
         {
-            std::cout << "Msg from client fd " << sockFd << ": " << buffer.data() << '\n';
-            write(sockFd, buffer.data(), buffer.size());
+            readBuffer->append(buffer.data(), readBytes);
         }
         else if (readBytes == 0)
         {
@@ -46,12 +50,16 @@ void Connection::echo(int sockFd)
         }
         else if (readBytes == -1 && errno == EINTR)
         {
-            std::cout << "Continue read.\n";
+            std::cout << "Continue reading.\n";
             continue;
         }
         else if (readBytes == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
         {
             std::cout << "Finish reading once, errno: " << errno << '\n';
+            std::cout << "Msg from client fd " << sockFd << " : " << readBuffer->c_str() << '\n';
+            common::exception::throw_if(write(sockFd, readBuffer->c_str(), readBuffer->size()) == -1,
+                                        "Sock write error.");
+            readBuffer->clear();
             break;
         }
     }

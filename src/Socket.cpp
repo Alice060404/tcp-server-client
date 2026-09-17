@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <iostream>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -47,6 +48,14 @@ int Socket::accept(InetAddress *addr)
 void Socket::setnonblocking()
 {
     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+}
+
+void Socket::connect(InetAddress *addr)
+{
+    std::cout << "Connecting to server..." << '\n';
+    common::exception::throw_if(::connect(fd, reinterpret_cast<sockaddr *>(&addr->addr), addr->addrLen) == -1,
+                                "Failed to connect.");
+    std::cout << "Connect to server successfully." << '\n';
 }
 
 int Socket::getFd() const

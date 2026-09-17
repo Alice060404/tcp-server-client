@@ -37,7 +37,7 @@ void Acceptor::acceptConnection()
     InetAddress *clientAddr = new InetAddress();
     Socket *clientSock = new Socket(sock->accept(clientAddr));
     std::cout << "new client fd " << clientSock->getFd() << " IP: " << inet_ntoa(clientAddr->getAddr().sin_addr)
-              << " Port: " << ntohs(clientAddr->getAddr().sin_port);
+              << " Port: " << ntohs(clientAddr->getAddr().sin_port) << '\n';
     clientSock->setnonblocking();
     newConnectionCallback(clientSock);
     delete clientAddr;

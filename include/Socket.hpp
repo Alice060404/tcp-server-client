@@ -12,13 +12,12 @@ class Socket
 
     ~Socket();
 
-    void bind(InetAddress *);
-
+    void bind(InetAddress *addr);
     void listen();
-
-    int accept(InetAddress *);
-
     void setnonblocking();
+
+    int accept(InetAddress *addr);
+    void connect(InetAddress *addr);
 
     int getFd() const;
 };
