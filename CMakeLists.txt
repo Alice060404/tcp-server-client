@@ -16,6 +16,7 @@ add_library(network
     src/EventLoop.cpp
     src/common.cpp
     src/Buffer.cpp
+    src/ThreadPool.cpp
 )
 
 target_compile_features(network PUBLIC cxx_std_20)
@@ -34,6 +35,9 @@ target_link_libraries(client PRIVATE network)
 
 add_executable(tcp_test tests/tcp_test.cpp)
 target_link_libraries(tcp_test PRIVATE network)
+
+add_executable(ThreadPoolTest tests/ThreadPoolTest.cpp)
+target_link_libraries(ThreadPoolTest PRIVATE network)
 
 foreach(target IN ITEMS network server client tcp_test)
     set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
