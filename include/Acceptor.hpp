@@ -12,15 +12,13 @@ class Acceptor
   private:
     EventLoop *loop;
     Socket *sock;
-    InetAddress *addr;
     Channel *acceptChannel;
+    std::function<void(Socket *)> newConnectionCallback;
 
   public:
     Acceptor(EventLoop *_loop);
     ~Acceptor();
 
-    std::function<void(Socket *)> newConnectionCallback;
-
-    void setNewConnectionCallback(std::function<void(Socket *_cb)> _newConnectionCallback);
+    void setNewConnectionCallback(std::function<void(Socket *)> _newConnectionCallback);
     void acceptConnection();
 };

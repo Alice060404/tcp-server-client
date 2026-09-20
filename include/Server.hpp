@@ -19,5 +19,6 @@ class Server
     ~Server();
 
     void newConnection(Socket *serverSock);
-    void deleteConnection(Socket *sock);
+    void deleteConnection(int sockFd);
+    void handleReadEvent(int sockFd);
 };

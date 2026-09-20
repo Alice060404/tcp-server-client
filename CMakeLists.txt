@@ -36,10 +36,14 @@ target_link_libraries(client PRIVATE network)
 add_executable(tcp_test tests/tcp_test.cpp)
 target_link_libraries(tcp_test PRIVATE network)
 
+find_package(Threads REQUIRED)
+add_executable(test tests/simple_test.cpp)
+target_link_libraries(test PRIVATE network Threads::Threads)
+
 add_executable(ThreadPoolTest tests/ThreadPoolTest.cpp)
 target_link_libraries(ThreadPoolTest PRIVATE network)
 
-foreach(target IN ITEMS network server client tcp_test)
+foreach(target IN ITEMS network server client tcp_test test)
     set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
 
     if(MSVC)

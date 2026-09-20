@@ -44,7 +44,7 @@ int main()
             const ssize_t readBytes = read(sockFd, buf.data(), buf.size());
             if (readBytes > 0)
             {
-                readBuffer->append(buf.data(), buf.size());
+                readBuffer->append(buf.data(), readBytes);
                 alreadyRead += readBytes;
             }
             else if (readBytes == 0)
@@ -52,13 +52,13 @@ int main()
                 std::cout << "Server disconnect.\n";
                 exit(EXIT_SUCCESS);
             }
-            if (alreadyRead >= readBuffer->size())
+            if (alreadyRead >= sendBuffer->size())
             {
                 std::cout << "Msg from server: " << readBuffer->c_str() << '\n';
                 break;
             }
-            readBuffer->clear();
         }
+        readBuffer->clear();
     }
     delete clientSock;
     delete serverAddr;

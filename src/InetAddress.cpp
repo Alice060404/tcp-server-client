@@ -1,5 +1,5 @@
 #include <arpa/inet.h>
-#include <cstddef>
+#include <cstdint>
 #include <netinet/in.h>
 #include <strings.h>
 #include <sys/socket.h>
@@ -11,7 +11,7 @@ InetAddress::InetAddress() : addrLen(sizeof(addr))
     bzero(&addr, sizeof(addr));
 }
 
-InetAddress::InetAddress(const char *ip, std::size_t port) : addrLen(sizeof(addr))
+InetAddress::InetAddress(const char *ip, uint16_t port) : addrLen(sizeof(addr))
 {
     bzero(&addr, sizeof(addr));
     addr.sin_family = AF_INET;

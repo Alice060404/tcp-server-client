@@ -16,7 +16,7 @@ class Epoll
 
     ~Epoll();
 
-    void addFd(int fd, uint32_t op);
+    void deleteChannel(Channel *channel);
 
     void updateChannel(Channel *channel);
 

@@ -1,5 +1,4 @@
 #include <cstddef>
-#include <cstdint>
 #include <netinet/in.h>
 #include <strings.h>
 #include <sys/epoll.h>
@@ -29,16 +28,6 @@ Epoll::~Epoll()
         epollFd = -1;
     }
     delete[] events;
-}
-
-void Epoll::addFd(int fd, uint32_t op)
-{
-    epoll_event ev;
-    bzero(&ev, sizeof(ev));
-
-    ev.data.fd = fd;
-    ev.events = op;
-    common::exception::throw_if(epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev) == -1, "epoll add event error.");
 }
 
 void Epoll::updateChannel(Channel *channel)
@@ -72,4 +61,11 @@ std::vector<Channel *> Epoll::poll(int timeout)
         activeEvents.push_back(channel);
     }
     return activeEvents;
+}
+
+void Epoll::deleteChannel(Channel *channel)
+{
+    int fd = channel->getFd();
+    common::exception::throw_if(epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, nullptr) == -1, "Epoll delete error.");
+    channel->setInepoll(false);
 }

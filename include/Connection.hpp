@@ -14,7 +14,7 @@ class Connection
     EventLoop *loop;
     Socket *sock;
     Channel *channel;
-    std::function<void(Socket *)> deleteConnectionCallback;
+    std::function<void(int)> deleteConnectionCallback;
     std::string *inBuffer;
     Buffer *readBuffer;
 
@@ -23,6 +23,6 @@ class Connection
     ~Connection();
 
     void echo(int sockFd);
-
-    void setDeleteConnectionCallback(std::function<void(Socket *)> _cb);
+    void send(int sockFd);
+    void setDeleteConnectionCallback(std::function<void(int)> _cb);
 };

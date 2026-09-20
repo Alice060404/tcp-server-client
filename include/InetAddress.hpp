@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
@@ -11,7 +12,7 @@ class InetAddress
     socklen_t addrLen;
 
     InetAddress();
-    InetAddress(const char *ip, std::size_t port);
+    InetAddress(const char *ip, uint16_t port);
     ~InetAddress();
 
     sockaddr_in getAddr() const;

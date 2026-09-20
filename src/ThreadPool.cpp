@@ -1,8 +1,4 @@
 #include "ThreadPool.hpp"
-#include <functional>
-#include <mutex>
-#include <stdexcept>
-#include <thread>
 
 ThreadPool::ThreadPool(int size) : stop(false)
 {
@@ -38,15 +34,4 @@ ThreadPool::~ThreadPool()
         if (thr.joinable())
             thr.join();
     }
-}
-
-void ThreadPool::add(std::function<void()> func)
-{
-    {
-        std::unique_lock<std::mutex> lock(taskMtx);
-        if (stop)
-            throw std::runtime_error("ThreadPool already stop, can not add task.");
-        tasks.emplace(func);
-    }
-    cv.notify_one();
 }

@@ -14,7 +14,9 @@ class Channel
     uint32_t events;
     uint32_t revents;
     bool inEpoll;
-    std::function<void()> callback;
+    bool useThreadPool;
+    std::function<void()> readCallback;
+    std::function<void()> writeCallback;
 
   public:
     Channel(EventLoop *_loop, int _fd);
@@ -28,7 +30,9 @@ class Channel
     uint32_t getRevents() const;
     bool getInepoll() const;
 
-    void setInepoll();
+    void useET();
+    void setInepoll(bool _in = true);
     void setRevents(uint32_t _ev);
-    void setCallback(std::function<void()> _cb);
+    void setReadCallback(std::function<void()> _cb);
+    void setUseThreadPool(bool use = true);
 };
