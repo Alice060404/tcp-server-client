@@ -22,14 +22,13 @@ Acceptor::Acceptor(EventLoop *_loop) : loop(_loop), sock(nullptr), acceptChannel
     std::function<void()> cb = std::bind(&Acceptor::acceptConnection, this);
     acceptChannel->setReadCallback(cb);
     acceptChannel->enableReading();
-    acceptChannel->setUseThreadPool(false);
     delete addr;
 }
 
 Acceptor::~Acceptor()
 {
-    delete sock;
     delete acceptChannel;
+    delete sock;
 }
 
 void Acceptor::acceptConnection()
@@ -38,12 +37,12 @@ void Acceptor::acceptConnection()
     Socket *clientSock = new Socket(sock->accept(clientAddr));
     std::cout << "new client fd " << clientSock->getFd() << " IP: " << inet_ntoa(clientAddr->getAddr().sin_addr)
               << " Port: " << ntohs(clientAddr->getAddr().sin_port) << '\n';
-    clientSock->setnonblocking();
+    clientSock->setNonBlocking();
     newConnectionCallback(clientSock);
     delete clientAddr;
 }
 
-void Acceptor::setNewConnectionCallback(std::function<void(Socket *)> _cb)
+void Acceptor::setNewConnectionCallback(std::function<void(Socket *)> const &_cb)
 {
     newConnectionCallback = _cb;
 }

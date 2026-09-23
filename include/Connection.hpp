@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
-#include <string>
+
+#include "Macros.hpp"
 
 class EventLoop;
 class Socket;
@@ -10,19 +12,51 @@ class Buffer;
 
 class Connection
 {
+  public:
+    enum State : std::uint8_t
+    {
+        Invalid = 1,
+        Handshaking,
+        Connected,
+        Closed,
+        Failed
+    };
+
   private:
     EventLoop *loop;
     Socket *sock;
-    Channel *channel;
-    std::function<void(int)> deleteConnectionCallback;
-    std::string *inBuffer;
-    Buffer *readBuffer;
+    Channel *channel{nullptr};
+    State state_{State::Invalid};
+    Buffer *sendBuffer_{nullptr};
+    Buffer *readBuffer_{nullptr};
+    std::function<void(Socket *)> deleteConnectionCallback;
+    std::function<void(Connection *)> onConnectCallback;
+
+    void readNonBlocking();
+    void writeNonBlocking();
+    void readBlocking();
+    void writeBlocking();
 
   public:
     Connection(EventLoop *_loop, Socket *_sock);
     ~Connection();
 
-    void echo(int sockFd);
-    void send(int sockFd);
-    void setDeleteConnectionCallback(std::function<void(int)> _cb);
+    DISALLOW_COPY_AND_MOVE(Connection)
+
+    State getState() const;
+
+    void read();
+    void write();
+    void close();
+
+    void setSendBuffer(const char *str);
+    Buffer *getReadBuffer() const;
+    const char *readBuffer() const;
+    Buffer *getSendBuffer() const;
+    const char *sendBuffer() const;
+    void getlineSendBuffer();
+    Socket *getSocket() const;
+    void onConnect(std::function<void()> fn);
+    void setDeleteConnectionCallback(std::function<void(Socket *)> const &_callback);
+    void setOnConnectCallback(std::function<void(Connection *)> const &_callback);
 };

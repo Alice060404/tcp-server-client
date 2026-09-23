@@ -1,7 +1,6 @@
 #pragma once
 
-#include <functional>
-
+#include "Macros.hpp"
 class Epoll;
 class Channel;
 class ThreadPool;
@@ -9,16 +8,16 @@ class ThreadPool;
 class EventLoop
 {
   private:
-    Epoll *ep;
-    ThreadPool *threadPool;
-    bool quit;
+    Epoll *ep{nullptr};
+    bool quit{false};
 
   public:
     EventLoop();
     ~EventLoop();
 
+    DISALLOW_COPY_AND_MOVE(EventLoop)
+
     void Loop();
 
     void updateChannel(Channel *channel);
-    void addThread(std::function<void()> func);
 };

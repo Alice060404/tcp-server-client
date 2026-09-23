@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstring>
 #include <netinet/in.h>
 #include <strings.h>
 #include <sys/epoll.h>
@@ -9,15 +10,15 @@
 #include "Epoll.hpp"
 #include "common.hpp"
 
-constexpr std::size_t MAX_EVENTS = 1024;
+constexpr std::size_t MAX_EVENTS = 1000;
 
-Epoll::Epoll() : epollFd(-1), events(nullptr)
+Epoll::Epoll()
 {
     epollFd = epoll_create1(0);
     common::exception::throw_if(epollFd == -1, "Epoll create error.");
 
     events = new epoll_event[MAX_EVENTS];
-    bzero(events, sizeof(*events) * MAX_EVENTS);
+    memset(events, 0, sizeof(*events) * MAX_EVENTS);
 }
 
 Epoll::~Epoll()
@@ -33,10 +34,9 @@ Epoll::~Epoll()
 void Epoll::updateChannel(Channel *channel)
 {
     int ChannelFd = channel->getFd();
-    epoll_event ev;
-    bzero(&ev, sizeof(ev));
+    epoll_event ev{};
     ev.data.ptr = channel;
-    ev.events = channel->getEvents();
+    ev.events = channel->getListenEvents();
 
     if (!channel->getInepoll())
     {
@@ -57,7 +57,7 @@ std::vector<Channel *> Epoll::poll(int timeout)
     for (int i = 0; i < nfds; ++i)
     {
         Channel *channel = (Channel *)events[i].data.ptr;
-        channel->setRevents(events[i].events);
+        channel->setReadyEvents(events[i].events);
         activeEvents.push_back(channel);
     }
     return activeEvents;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Macros.hpp"
 #include <condition_variable>
 #include <functional>
 #include <future>
@@ -19,11 +20,13 @@ class ThreadPool
     std::queue<std::function<void()>> tasks;
     std::mutex taskMtx;
     std::condition_variable cv;
-    bool stop;
+    bool stop{false};
 
   public:
-    ThreadPool(int size = 10);
+    explicit ThreadPool(unsigned int size = std::thread::hardware_concurrency());
     ~ThreadPool();
+
+    DISALLOW_COPY_AND_MOVE(ThreadPool)
 
     template <typename F, typename... Args>
     auto add(F &&f, Args &&...args) -> std::future<typename std::invoke_result_t<F, Args...>>;

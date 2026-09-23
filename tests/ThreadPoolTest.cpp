@@ -4,7 +4,7 @@
 
 #include "ThreadPool.hpp"
 
-void print(int a, double b, const char *str, std::string s)
+void print(int a, double b, const char *str, const std::string &s)
 {
     std::cout << a << " " << b << " " << str << " " << s << '\n';
 }

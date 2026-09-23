@@ -1,5 +1,7 @@
+#include <cerrno>
+#include <cstdint>
 #include <fcntl.h>
-#include <iostream>
+#include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -7,7 +9,7 @@
 #include "Socket.hpp"
 #include "common.hpp"
 
-Socket::Socket() : fd(-1)
+Socket::Socket()
 {
     fd = ::socket(AF_INET, SOCK_STREAM, 0);
     common::exception::throw_if(fd == -1, "Failed to sock.");
@@ -29,8 +31,8 @@ Socket::~Socket()
 
 void Socket::bind(InetAddress *addr)
 {
-    common::exception::throw_if(::bind(fd, reinterpret_cast<sockaddr *>(&addr->addr), addr->addrLen) == -1,
-                                "Failed to bind.");
+    sockaddr_in tmpAddr = addr->getAddr();
+    common::exception::throw_if(::bind(fd, (sockaddr *)&tmpAddr, sizeof(tmpAddr)) == -1, "Failed to bind.");
 }
 
 void Socket::listen()
@@ -38,24 +40,74 @@ void Socket::listen()
     common::exception::throw_if(::listen(fd, SOMAXCONN) == -1, "Failed to listen.");
 }
 
-int Socket::accept(InetAddress *addr)
-{
-    int clientSockFd = ::accept(fd, reinterpret_cast<sockaddr *>(&addr->addr), &addr->addrLen);
-    common::exception::throw_if(clientSockFd == -1, "Sock accept error.");
-    return clientSockFd;
-}
-
-void Socket::setnonblocking()
+void Socket::setNonBlocking()
 {
     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 }
 
+bool Socket::isNonBlocking() const
+{
+    return (fcntl(fd, F_GETFL) & O_NONBLOCK) != 0;
+}
+
+int Socket::accept(InetAddress *addr)
+{
+    // for server sock
+    int clntSockFd = -1;
+    sockaddr_in tmpAddr{};
+    socklen_t addrLen = sizeof(tmpAddr);
+    if (fcntl(fd, F_GETFL) & O_NONBLOCK)
+    {
+        while (true)
+        {
+            clntSockFd = ::accept(fd, (sockaddr *)&tmpAddr, &addrLen);
+            if (clntSockFd == -1 && ((errno == EAGAIN) || errno == EWOULDBLOCK))
+            {
+                continue;
+            }
+            if (clntSockFd == -1)
+            {
+                common::exception::throw_if(true, "Sock accept error.");
+            }
+            else
+                break;
+        }
+    }
+    else
+    {
+        clntSockFd = ::accept(fd, (sockaddr *)&tmpAddr, &addrLen);
+        common::exception::throw_if(clntSockFd == -1, "Sock accept error.");
+    }
+    addr->setAddr(tmpAddr);
+    return clntSockFd;
+}
+
 void Socket::connect(InetAddress *addr)
 {
-    std::cout << "Connecting to server..." << '\n';
-    common::exception::throw_if(::connect(fd, reinterpret_cast<sockaddr *>(&addr->addr), addr->addrLen) == -1,
-                                "Failed to connect.");
-    std::cout << "Connect to server successfully." << '\n';
+    // for client sock
+    sockaddr_in tmpAddr = addr->getAddr();
+    if (fcntl(fd, F_GETFL) & O_NONBLOCK)
+    {
+        while (true)
+        {
+            int ret = ::connect(fd, (sockaddr *)&tmpAddr, sizeof(tmpAddr));
+            if (ret == 0)
+                break;
+            if (ret == -1 && errno == EINPROGRESS)
+                continue;
+            if (ret == -1)
+                common::exception::throw_if(true, "Sock connect error.");
+        }
+    }
+    else
+        common::exception::throw_if(::connect(fd, (sockaddr *)&tmpAddr, sizeof(tmpAddr)) == -1, "Sock connect error.");
+}
+
+void Socket::connect(const char *IP, uint16_t PORT)
+{
+    InetAddress *addr = new InetAddress(IP, PORT);
+    connect(addr);
+    delete addr;
 }
 
 int Socket::getFd() const

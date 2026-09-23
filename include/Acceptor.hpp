@@ -2,6 +2,8 @@
 
 #include <functional>
 
+#include "Macros.hpp"
+
 class EventLoop;
 class Socket;
 class Channel;
@@ -16,9 +18,11 @@ class Acceptor
     std::function<void(Socket *)> newConnectionCallback;
 
   public:
-    Acceptor(EventLoop *_loop);
+    explicit Acceptor(EventLoop *_loop);
     ~Acceptor();
 
-    void setNewConnectionCallback(std::function<void(Socket *)> _newConnectionCallback);
+    DISALLOW_COPY_AND_MOVE(Acceptor)
+
+    void setNewConnectionCallback(std::function<void(Socket *)> const &_newConnectionCallback);
     void acceptConnection();
 };

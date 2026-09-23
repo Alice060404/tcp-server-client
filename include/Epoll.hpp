@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include "Macros.hpp"
 #include <sys/epoll.h>
 #include <vector>
 
@@ -8,13 +8,14 @@ class Channel;
 class Epoll
 {
   private:
-    int epollFd;
-    epoll_event *events;
+    int epollFd{1};
+    epoll_event *events{nullptr};
 
   public:
     Epoll();
-
     ~Epoll();
+
+    DISALLOW_COPY_AND_MOVE(Epoll)
 
     void deleteChannel(Channel *channel);
 

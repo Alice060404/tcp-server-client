@@ -1,20 +1,24 @@
 #pragma once
 
-#include <cstddef>
+#include "Macros.hpp"
 #include <cstdint>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
 class InetAddress
 {
-  public:
-    sockaddr_in addr;
-    socklen_t addrLen;
+  private:
+    sockaddr_in addr{};
 
+  public:
     InetAddress();
     InetAddress(const char *ip, uint16_t port);
-    ~InetAddress();
+    ~InetAddress() = default;
 
+    DISALLOW_COPY_AND_MOVE(InetAddress)
+
+    void setAddr(sockaddr_in _addr);
     sockaddr_in getAddr() const;
-    socklen_t getAddrLen() const;
+    const char *getIP() const;
+    uint16_t getPort() const;
 };

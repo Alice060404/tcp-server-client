@@ -3,14 +3,18 @@
 #include <string>
 #include <sys/types.h>
 
+#include "Macros.hpp"
+
 class Buffer
 {
   private:
     std::string buf;
 
   public:
-    Buffer();
-    ~Buffer();
+    Buffer() = default;
+    ~Buffer() = default;
+
+    DISALLOW_COPY_AND_MOVE(Buffer)
 
     void append(const char *_str, int _size);
 

@@ -1,8 +1,8 @@
 #include "ThreadPool.hpp"
 
-ThreadPool::ThreadPool(int size) : stop(false)
+ThreadPool::ThreadPool(unsigned int size)
 {
-    for (int i = 0; i < size; ++i)
+    for (unsigned int i = 0; i < size; ++i)
     {
         threads.emplace_back(std::thread([this]() {
             while (true)

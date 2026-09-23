@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Macros.hpp"
 #include <cstdint>
 #include <functional>
 
@@ -14,7 +15,6 @@ class Channel
     uint32_t events;
     uint32_t revents;
     bool inEpoll;
-    bool useThreadPool;
     std::function<void()> readCallback;
     std::function<void()> writeCallback;
 
@@ -22,17 +22,18 @@ class Channel
     Channel(EventLoop *_loop, int _fd);
     ~Channel();
 
+    DISALLOW_COPY_AND_MOVE(Channel)
+
     void enableReading();
     void handleEvent();
 
     int getFd() const;
-    uint32_t getEvents() const;
-    uint32_t getRevents() const;
+    uint32_t getListenEvents() const;
+    uint32_t getReadyEvents() const;
     bool getInepoll() const;
 
     void useET();
     void setInepoll(bool _in = true);
-    void setRevents(uint32_t _ev);
-    void setReadCallback(std::function<void()> _cb);
-    void setUseThreadPool(bool use = true);
+    void setReadyEvents(uint32_t _ev);
+    void setReadCallback(std::function<void()> const &_callback);
 };

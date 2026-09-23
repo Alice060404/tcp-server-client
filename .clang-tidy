@@ -1,0 +1,6 @@
+# 优先检查潜在错误和性能问题，避免一开始引入大量风格要求。
+Checks: '-*,clang-analyzer-*,bugprone-*,performance-*'
+WarningsAsErrors: ''
+HeaderFilterRegex: '(^|/)(include|src)/'
+SystemHeaders: false
+InheritParentConfig: false
