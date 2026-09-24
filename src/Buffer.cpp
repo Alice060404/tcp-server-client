@@ -1,16 +1,16 @@
+#include "Buffer.hpp"
+
 #include <iostream>
 #include <string>
 #include <sys/types.h>
 
-#include "Buffer.hpp"
-
-void Buffer::append(const char *_str, int _size)
+void Buffer::append(const char *data, int length)
 {
-    for (int i = 0; i < _size; ++i)
+    for (int i = 0; i < length; ++i)
     {
-        if (_str[i] == '\0')
+        if (data[i] == '\0')
             break;
-        buf.push_back(_str[i]);
+        buf.push_back(data[i]);
     }
 }
 
@@ -35,8 +35,8 @@ void Buffer::getline()
     std::getline(std::cin, buf);
 }
 
-void Buffer::setBuf(const char *_buf)
+void Buffer::setBuf(const char *data)
 {
     buf.clear();
-    buf.append(_buf);
+    buf.append(data);
 }

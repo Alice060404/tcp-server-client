@@ -1,5 +1,9 @@
 #include "ThreadPool.hpp"
 
+#include <functional>
+#include <mutex>
+#include <thread>
+
 ThreadPool::ThreadPool(unsigned int size)
 {
     for (unsigned int i = 0; i < size; ++i)

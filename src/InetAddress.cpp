@@ -1,11 +1,10 @@
+#include "InetAddress.hpp"
+
 #include <arpa/inet.h>
 #include <cstdint>
 #include <cstring>
 #include <netinet/in.h>
-#include <strings.h>
 #include <sys/socket.h>
-
-#include "InetAddress.hpp"
 
 InetAddress::InetAddress() = default;
 
@@ -32,7 +31,7 @@ uint16_t InetAddress::getPort() const
     return ntohs(addr.sin_port);
 }
 
-void InetAddress::setAddr(sockaddr_in _addr)
+void InetAddress::setAddr(sockaddr_in address)
 {
-    addr = _addr;
+    addr = address;
 }

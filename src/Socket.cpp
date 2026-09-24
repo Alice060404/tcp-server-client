@@ -1,3 +1,8 @@
+#include "Socket.hpp"
+
+#include "InetAddress.hpp"
+#include "common.hpp"
+
 #include <cerrno>
 #include <cstdint>
 #include <fcntl.h>
@@ -5,17 +10,13 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "InetAddress.hpp"
-#include "Socket.hpp"
-#include "common.hpp"
-
 Socket::Socket()
 {
     fd = ::socket(AF_INET, SOCK_STREAM, 0);
     common::exception::throw_if(fd == -1, "Failed to sock.");
 }
 
-Socket::Socket(int _fd) : fd(_fd)
+Socket::Socket(int socketFd) : fd(socketFd)
 {
     common::exception::throw_if(fd == -1, "Failed to sock.");
 }
@@ -103,9 +104,9 @@ void Socket::connect(InetAddress *addr)
         common::exception::throw_if(::connect(fd, (sockaddr *)&tmpAddr, sizeof(tmpAddr)) == -1, "Sock connect error.");
 }
 
-void Socket::connect(const char *IP, uint16_t PORT)
+void Socket::connect(const char *ip, uint16_t port)
 {
-    InetAddress *addr = new InetAddress(IP, PORT);
+    InetAddress *addr = new InetAddress(ip, port);
     connect(addr);
     delete addr;
 }

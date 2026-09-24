@@ -1,27 +1,26 @@
+#include "Connection.hpp"
+
+#include "Buffer.hpp"
+#include "Channel.hpp"
+#include "Macros.hpp"
+#include "Socket.hpp"
+
 #include <cassert>
 #include <cerrno>
-#include <cstddef>
+#include <cstdio>
+#include <cstring>
 #include <functional>
-#include <memory.h>
+#include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "Buffer.hpp"
-#include "Channel.hpp"
-#include "Connection.hpp"
-#include "EventLoop.hpp"
-#include "Macros.hpp"
-#include "Socket.hpp"
-
-constexpr std::size_t BUFFER_SIZE = 1024;
-
-Connection::Connection(EventLoop *_loop, Socket *_sock) : loop(_loop), sock(_sock)
+Connection::Connection(EventLoop *eventLoop, Socket *socket) : loop(eventLoop), sock(socket)
 {
     if (loop != nullptr)
     {
-        channel = new Channel(loop, sock->getFd());
-        channel->enableReading();
+        channel = new Channel(loop, sock);
+        channel->enableRead();
         channel->useET();
     }
     readBuffer_ = new Buffer();
@@ -60,6 +59,18 @@ void Connection::write()
     sendBuffer_->clear();
 }
 
+void Connection::send(const std::string &msg)
+{
+    setSendBuffer(msg.c_str());
+    write();
+}
+
+void Connection::business()
+{
+    read();
+    onMessageCallback(this);
+}
+
 void Connection::readNonBlocking()
 {
     int sockfd = sock->getFd();
@@ -85,12 +96,14 @@ void Connection::readNonBlocking()
         {
             printf("read EOF, client fd %d disconnected\n", sockfd);
             state_ = State::Closed;
+            close();
             break;
         }
         else
         {
             printf("Other error on client fd %d\n", sockfd);
             state_ = State::Closed;
+            close();
             break;
         }
     }
@@ -197,15 +210,22 @@ const char *Connection::sendBuffer() const
     return sendBuffer_->c_str();
 }
 
-void Connection::setDeleteConnectionCallback(std::function<void(Socket *)> const &_callback)
+void Connection::setDeleteConnectionCallback(std::function<void(Socket *)> const &callback)
 {
-    deleteConnectionCallback = _callback;
+    deleteConnectionCallback = callback;
 }
 
-void Connection::setOnConnectCallback(std::function<void(Connection *)> const &_callback)
+void Connection::setOnConnectCallback(std::function<void(Connection *)> const &callback)
 {
-    onConnectCallback = _callback;
+    onConnectCallback = callback;
     channel->setReadCallback([this]() { onConnectCallback(this); });
+}
+
+void Connection::setOnMessageCallback(std::function<void(Connection *)> const &callback)
+{
+    onMessageCallback = callback;
+    std::function<void()> bus = std::bind(&Connection::business, this);
+    channel->setReadCallback(bus);
 }
 
 void Connection::getlineSendBuffer()

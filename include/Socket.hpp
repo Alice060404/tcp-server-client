@@ -1,18 +1,16 @@
 #pragma once
 
 #include "Macros.hpp"
+
 #include <cstdint>
 
 class InetAddress;
 
 class Socket
 {
-  private:
-    int fd{-1};
-
   public:
     Socket();
-    explicit Socket(int _fd);
+    explicit Socket(int socketFd);
     ~Socket();
 
     DISALLOW_COPY_AND_MOVE(Socket)
@@ -24,7 +22,10 @@ class Socket
 
     int accept(InetAddress *addr);
     void connect(InetAddress *addr);
-    void connect(const char *IP, uint16_t PORT);
+    void connect(const char *ip, uint16_t port);
 
     int getFd() const;
+
+  private:
+    int fd{-1};
 };

@@ -1,9 +1,10 @@
 #pragma once
 
+#include "Macros.hpp"
+
 #include <cstdint>
 #include <functional>
-
-#include "Macros.hpp"
+#include <string>
 
 class EventLoop;
 class Socket;
@@ -22,23 +23,7 @@ class Connection
         Failed
     };
 
-  private:
-    EventLoop *loop;
-    Socket *sock;
-    Channel *channel{nullptr};
-    State state_{State::Invalid};
-    Buffer *sendBuffer_{nullptr};
-    Buffer *readBuffer_{nullptr};
-    std::function<void(Socket *)> deleteConnectionCallback;
-    std::function<void(Connection *)> onConnectCallback;
-
-    void readNonBlocking();
-    void writeNonBlocking();
-    void readBlocking();
-    void writeBlocking();
-
-  public:
-    Connection(EventLoop *_loop, Socket *_sock);
+    Connection(EventLoop *eventLoop, Socket *socket);
     ~Connection();
 
     DISALLOW_COPY_AND_MOVE(Connection)
@@ -47,6 +32,7 @@ class Connection
 
     void read();
     void write();
+    void send(const std::string &msg);
     void close();
 
     void setSendBuffer(const char *str);
@@ -57,6 +43,25 @@ class Connection
     void getlineSendBuffer();
     Socket *getSocket() const;
     void onConnect(std::function<void()> fn);
-    void setDeleteConnectionCallback(std::function<void(Socket *)> const &_callback);
-    void setOnConnectCallback(std::function<void(Connection *)> const &_callback);
+    void onMessage(std::function<void()> fn);
+    void setDeleteConnectionCallback(std::function<void(Socket *)> const &callback);
+    void setOnConnectCallback(std::function<void(Connection *)> const &callback);
+    void setOnMessageCallback(std::function<void(Connection *)> const &callback);
+    void business();
+
+  private:
+    EventLoop *loop;
+    Socket *sock;
+    Channel *channel{nullptr};
+    State state_{State::Invalid};
+    Buffer *sendBuffer_{nullptr};
+    Buffer *readBuffer_{nullptr};
+    std::function<void(Socket *)> deleteConnectionCallback;
+    std::function<void(Connection *)> onConnectCallback;
+    std::function<void(Connection *)> onMessageCallback;
+
+    void readNonBlocking();
+    void writeNonBlocking();
+    void readBlocking();
+    void writeBlocking();
 };

@@ -1,39 +1,45 @@
 #pragma once
 
 #include "Macros.hpp"
-#include <cstdint>
+
 #include <functional>
 
-class Epoll;
 class EventLoop;
+class Socket;
 
 class Channel
 {
-  private:
-    EventLoop *loop;
-    int fd;
-    uint32_t events;
-    uint32_t revents;
-    bool inEpoll;
-    std::function<void()> readCallback;
-    std::function<void()> writeCallback;
-
   public:
-    Channel(EventLoop *_loop, int _fd);
+    Channel(EventLoop *eventLoop, Socket *socket);
     ~Channel();
 
     DISALLOW_COPY_AND_MOVE(Channel)
 
-    void enableReading();
+    void enableRead();
+    void enableWrite();
     void handleEvent();
 
-    int getFd() const;
-    uint32_t getListenEvents() const;
-    uint32_t getReadyEvents() const;
-    bool getInepoll() const;
+    Socket *getSocket() const;
+    int getListenEvents() const;
+    int getReadyEvents() const;
+    bool getExist() const;
+    void setExist(bool in = true);
 
     void useET();
-    void setInepoll(bool _in = true);
-    void setReadyEvents(uint32_t _ev);
-    void setReadCallback(std::function<void()> const &_callback);
+    void setReadyEvents(int events);
+    void setReadCallback(std::function<void()> const &callback);
+    void setWriteCallback(std::function<void()> const &callback);
+
+    static const int READ_EVENT;
+    static const int WRITE_EVENT;
+    static const int ET;
+
+  private:
+    EventLoop *loop;
+    Socket *socket;
+    int listenEvents{0};
+    int readyEvents{0};
+    bool exist{false};
+    std::function<void()> readCallback;
+    std::function<void()> writeCallback;
 };

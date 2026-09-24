@@ -1,22 +1,21 @@
-#include <arpa/inet.h>
-#include <cstdint>
-#include <functional>
-#include <sys/types.h>
-#include <thread>
-#include <unistd.h>
-#include <utility>
+#include "Server.hpp"
 
 #include "Acceptor.hpp"
-#include "Channel.hpp"
 #include "Connection.hpp"
 #include "EventLoop.hpp"
-#include "Server.hpp"
+#include "Exception.hpp"
 #include "Socket.hpp"
 #include "ThreadPool.hpp"
-#include "common.hpp"
 
-Server::Server(EventLoop *_loop) : mainReactor(_loop), acceptor(nullptr), threadPool(nullptr)
+#include <cstdint>
+#include <functional>
+#include <thread>
+#include <utility>
+
+Server::Server(EventLoop *eventLoop) : mainReactor(eventLoop), acceptor(nullptr), threadPool(nullptr)
 {
+    if (mainReactor == nullptr)
+        throw Exception(ExceptionType::INVALID, "Main reactor can not be nullptr.");
     acceptor = new Acceptor(mainReactor);
     std::function<void(Socket *)> cb = std::bind(&Server::newConnection, this, std::placeholders::_1);
     acceptor->setNewConnectionCallback(cb);
@@ -25,30 +24,36 @@ Server::Server(EventLoop *_loop) : mainReactor(_loop), acceptor(nullptr), thread
     threadPool = new ThreadPool(size);
     for (int i = 0; i < size; ++i)
     {
-        subReaactor.push_back(new EventLoop());
+        subReactors.push_back(new EventLoop());
     }
     for (int i = 0; i < size; ++i)
     {
-        std::function<void()> subLoop = std::bind(&EventLoop::Loop, subReaactor[i]);
+        std::function<void()> subLoop = std::bind(&EventLoop::Loop, subReactors[i]);
         threadPool->add(std::move(subLoop));
     }
 }
 
 Server::~Server()
 {
+    for (EventLoop *each : subReactors)
+        delete each;
     delete acceptor;
     delete threadPool;
 }
 
 void Server::newConnection(Socket *sock)
 {
-    common::exception::throw_if(sock->getFd() == -1, "New connection error.");
-    uint64_t random = sock->getFd() % subReaactor.size();
-    Connection *conn = new Connection(subReaactor[random], sock);
+    if (sock->getFd() == -1)
+        throw Exception(ExceptionType::INVALID_SOCKET, "New Connection error, invalid client socket.");
+
+    uint64_t loopIndex = sock->getFd() % subReactors.size();
+    Connection *conn = new Connection(subReactors[loopIndex], sock);
     std::function<void(Socket *)> cb = std::bind(&Server::deleteConnection, this, std::placeholders::_1);
     conn->setDeleteConnectionCallback(cb);
-    conn->setOnConnectCallback(onConnectCallback);
+    conn->setOnMessageCallback(onMessageCallback);
     connections[sock->getFd()] = conn;
+    if (newConnectCallback)
+        newConnectCallback(conn);
 }
 
 void Server::deleteConnection(Socket *sock)
@@ -67,4 +72,14 @@ void Server::deleteConnection(Socket *sock)
 void Server::onConnect(std::function<void(Connection *)> fn)
 {
     onConnectCallback = std::move(fn);
+}
+
+void Server::onMessage(std::function<void(Connection *)> fn)
+{
+    onMessageCallback = std::move(fn);
+}
+
+void Server::newConnect(std::function<void(Connection *)> fn)
+{
+    newConnectCallback = std::move(fn);
 }

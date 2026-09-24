@@ -1,8 +1,8 @@
+#include "ThreadPool.hpp"
+
 #include <functional>
 #include <iostream>
 #include <string>
-
-#include "ThreadPool.hpp"
 
 void print(int a, double b, const char *str, const std::string &s)
 {
