@@ -1,8 +1,8 @@
+#include "Buffer.hpp"
 #include "Connection.hpp"
-#include "EventLoop.hpp"
-#include "Server.hpp"
 #include "SignalHandler.hpp"
 #include "Socket.hpp"
+#include "TCPServer.hpp"
 
 #include <csignal>
 #include <cstdlib>
@@ -10,25 +10,25 @@
 
 int main()
 {
-    EventLoop *loop = new EventLoop();
-    Server *server = new Server(loop);
+    TCPServer *server = new TCPServer();
 
     Signal::signal(SIGINT, [&] {
         delete server;
-        delete loop;
         std::cout << "Server exit." << '\n';
         exit(0);
     });
 
-    server->newConnect(
+    server->onConnect(
         [](Connection *conn) { std::cout << "New connection fd: " << conn->getSocket()->getFd() << '\n'; });
 
-    server->onMessage([](Connection *conn) {
-        std::cout << "Message from client " << conn->readBuffer() << '\n';
+    server->onRecv([](Connection *conn) {
+        std::cout << "Message from client " << conn->getReadBuffer()->c_str() << '\n';
         if (conn->getState() == Connection::State::Connected)
-            conn->send(conn->readBuffer());
+            conn->send(conn->getReadBuffer()->c_str());
     });
 
-    loop->Loop();
+    server->start();
+
+    delete server;
     return 0;
 }

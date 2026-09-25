@@ -1,5 +1,6 @@
 #pragma once
-#define OS_LINUX
+
+#include <cstdint>
 
 // Macros to disable copying and moving
 #define DISALLOW_COPY(cname)                                                                                           \
@@ -14,4 +15,13 @@
     DISALLOW_COPY(cname);                                                                                              \
     DISALLOW_MOVE(cname);
 
-#define ASSERT(expr, message) assert((expr) && (message))
+enum RC : uint8_t
+{
+    RC_UNDEFINED,
+    RC_SUCCESS,
+    RC_SOCKET_ERROR,
+    RC_POLLER_ERROR,
+    RC_CONNECTION_ERROR,
+    RC_ACCEPTOR_ERROR,
+    RC_UNIMPLEMENTED
+};

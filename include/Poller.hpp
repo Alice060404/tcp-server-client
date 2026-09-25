@@ -2,11 +2,8 @@
 
 #include "Macros.hpp"
 
-#include <vector>
-
-#ifdef OS_LINUX
 #include <sys/epoll.h>
-#endif
+#include <vector>
 
 #ifdef OS_MACOS
 #include <sys/event.h>
@@ -21,18 +18,16 @@ class Poller
 
     DISALLOW_COPY_AND_MOVE(Poller)
 
-    void deleteChannel(Channel *channel);
-    void updateChannel(Channel *channel);
+    RC deleteChannel(Channel *channel) const;
+    RC updateChannel(Channel *channel) const;
 
-    std::vector<Channel *> poll(int timeout = -1);
+    std::vector<Channel *> poll(int timeout = -1) const;
 
   private:
-    int fd{1};
-#ifdef OS_LINUX
-    epoll_event *events{nullptr};
-#endif
+    int fd_;
+    epoll_event *events_{nullptr};
 
 #ifdef OS_MACOS
-    kevent *events{nullptr};
+    kevent *events_{nullptr};
 #endif
 };

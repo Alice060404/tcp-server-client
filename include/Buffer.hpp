@@ -15,13 +15,13 @@ class Buffer
 
     void append(const char *data, int length);
 
-    ssize_t size() const;
+    const std::string &buf() const;
+    size_t size() const;
     const char *c_str() const;
 
     void clear();
-    void getline();
     void setBuf(const char *data);
 
   private:
-    std::string buf;
+    std::string buf_;
 };

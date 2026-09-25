@@ -16,7 +16,6 @@ if(ENABLE_CLANG_TIDY)
 endif()
 
 add_library(network
-    src/InetAddress.cpp
     src/Poller.cpp
     src/Socket.cpp
     src/Channel.cpp
@@ -24,7 +23,7 @@ add_library(network
     src/common.cpp
     src/Buffer.cpp
     src/ThreadPool.cpp
-    src/Server.cpp
+    src/TCPServer.cpp
     src/Acceptor.cpp
     src/Connection.cpp
 )
@@ -36,18 +35,15 @@ target_link_libraries(network PUBLIC Threads::Threads)
 add_executable(echo_server echo_server.cpp)
 add_executable(echo_client echo_client.cpp)
 add_executable(echo_clients echo_clients.cpp)
-add_executable(chat_server chat_server.cpp)
-add_executable(chat_client chat_client.cpp)
-add_executable(http_server http_server.cpp)
 
-foreach(target IN ITEMS echo_server echo_client echo_clients chat_server chat_client http_server)
+foreach(target IN ITEMS echo_server echo_client echo_clients)
     target_link_libraries(${target} PRIVATE network)
 endforeach()
 
 add_executable(ThreadPoolTest tests/ThreadPoolTest.cpp)
 target_link_libraries(ThreadPoolTest PRIVATE network)
 
-foreach(target IN ITEMS network echo_server echo_client echo_clients chat_server chat_client http_server ThreadPoolTest)
+foreach(target IN ITEMS network echo_server echo_client echo_clients ThreadPoolTest)
     set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
 
     if(ENABLE_CLANG_TIDY)

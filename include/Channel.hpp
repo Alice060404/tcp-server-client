@@ -10,36 +10,38 @@ class Socket;
 class Channel
 {
   public:
-    Channel(EventLoop *eventLoop, Socket *socket);
+    Channel(int fd, EventLoop *loop);
     ~Channel();
 
     DISALLOW_COPY_AND_MOVE(Channel)
 
     void enableRead();
     void enableWrite();
-    void handleEvent();
+    void handleEvent() const;
 
-    Socket *getSocket() const;
-    int getListenEvents() const;
-    int getReadyEvents() const;
+    int getFd() const;
+    short getListenEvents() const;
+    short getReadyEvents() const;
     bool getExist() const;
     void setExist(bool in = true);
 
-    void useET();
-    void setReadyEvents(int events);
+    void enableET();
+    void setReadyEvents(short events);
+    void setReadCallback(std::function<void()> &&callback);
     void setReadCallback(std::function<void()> const &callback);
+    void setWriteCallback(std::function<void()> &&callback);
     void setWriteCallback(std::function<void()> const &callback);
 
-    static const int READ_EVENT;
-    static const int WRITE_EVENT;
-    static const int ET;
+    static const short READ_EVENT;
+    static const short WRITE_EVENT;
+    static const short ET;
 
   private:
-    EventLoop *loop;
-    Socket *socket;
-    int listenEvents{0};
-    int readyEvents{0};
-    bool exist{false};
-    std::function<void()> readCallback;
-    std::function<void()> writeCallback;
+    int fd_;
+    EventLoop *loop_;
+    short listenEvents_;
+    short readyEvents_;
+    bool exist_;
+    std::function<void()> readCallback_;
+    std::function<void()> writeCallback_;
 };

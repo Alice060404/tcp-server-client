@@ -2,78 +2,91 @@
 
 #include "Buffer.hpp"
 #include "Channel.hpp"
+#include "EventLoop.hpp"
 #include "Macros.hpp"
 #include "Socket.hpp"
 
 #include <cassert>
 #include <cerrno>
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <functional>
+#include <iostream>
+#include <memory>
 #include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <utility>
 
-Connection::Connection(EventLoop *eventLoop, Socket *socket) : loop(eventLoop), sock(socket)
+Connection::Connection(int fd, EventLoop *loop)
 {
+    socket_ = std::make_unique<Socket>();
+    socket_->setFd(fd);
     if (loop != nullptr)
     {
-        channel = new Channel(loop, sock);
-        channel->enableRead();
-        channel->useET();
+        channel_ = std::make_unique<Channel>(fd, loop);
+        channel_->enableRead();
+        channel_->enableET();
     }
-    readBuffer_ = new Buffer();
-    sendBuffer_ = new Buffer();
+    readBuffer_ = std::make_unique<Buffer>();
+    sendBuffer_ = std::make_unique<Buffer>();
+
     state_ = State::Connected;
 }
 
 Connection::~Connection()
 {
-    if (loop != nullptr)
+}
+
+RC Connection::read()
+{
+    if (state_ != State::Connected)
     {
-        delete channel;
+        perror("Connection is not onnected, can not read");
+        return RC_CONNECTION_ERROR;
     }
-    delete sock;
-    delete readBuffer_;
-    delete sendBuffer_;
-}
-
-void Connection::read()
-{
-    ASSERT(state_ == State::Connected, "Connection state is disconnected.");
+    assert(state_ == State::Connected && "Connection state is disconnected.");
     readBuffer_->clear();
-    if (sock->isNonBlocking())
-        readNonBlocking();
+    if (socket_->isNonBlocking())
+        return readNonBlocking();
     else
-        readBlocking();
+        return readBlocking();
 }
 
-void Connection::write()
+RC Connection::write()
 {
-    ASSERT(state_ == State::Connected, "Connection state is disconnected.");
-    if (sock->isNonBlocking())
-        writeNonBlocking();
+    if (state_ != State::Connected)
+    {
+        perror("Connection is not onnected, can not write");
+        return RC_CONNECTION_ERROR;
+    }
+    RC rc = RC_UNDEFINED;
+    if (socket_->isNonBlocking())
+        rc = writeNonBlocking();
     else
-        writeBlocking();
+        rc = writeBlocking();
     sendBuffer_->clear();
+    return rc;
 }
 
-void Connection::send(const std::string &msg)
+RC Connection::send(const std::string &msg)
 {
     setSendBuffer(msg.c_str());
     write();
+    return RC_SUCCESS;
 }
 
 void Connection::business()
 {
     read();
-    onMessageCallback(this);
+    onRecvCallback(this);
 }
 
-void Connection::readNonBlocking()
+RC Connection::readNonBlocking()
 {
-    int sockfd = sock->getFd();
+    int sockfd = socket_->getFd();
     char buf[1024];
     while (true)
     {
@@ -85,7 +98,7 @@ void Connection::readNonBlocking()
         }
         else if (readBytes == -1 && errno == EINTR)
         {
-            printf("continue reading\n");
+            std::cout << "continue reading\n";
             continue;
         }
         else if (readBytes == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
@@ -94,24 +107,25 @@ void Connection::readNonBlocking()
         }
         else if (readBytes == 0)
         {
-            printf("read EOF, client fd %d disconnected\n", sockfd);
+            std::cout << "read EOF, client fd " << sockfd << " disconnected\n";
             state_ = State::Closed;
             close();
             break;
         }
         else
         {
-            printf("Other error on client fd %d\n", sockfd);
+            std::cout << "Other error on client fd " << sockfd << '\n';
             state_ = State::Closed;
             close();
             break;
         }
     }
+    return RC_SUCCESS;
 }
 
-void Connection::writeNonBlocking()
+RC Connection::writeNonBlocking()
 {
-    int sockfd = sock->getFd();
+    int sockfd = socket_->getFd();
     char buf[sendBuffer_->size()];
     memcpy(buf, sendBuffer_->c_str(), sendBuffer_->size());
     int data_size = sendBuffer_->size();
@@ -121,7 +135,7 @@ void Connection::writeNonBlocking()
         ssize_t bytes_write = ::write(sockfd, buf + data_size - data_left, data_left);
         if (bytes_write == -1 && errno == EINTR)
         {
-            printf("continue writing\n");
+            std::cout << "continue writing\n";
             continue;
         }
         if (bytes_write == -1 && errno == EAGAIN)
@@ -130,22 +144,21 @@ void Connection::writeNonBlocking()
         }
         if (bytes_write == -1)
         {
-            printf("Other error on client fd %d\n", sockfd);
+            std::cout << "Other error on client fd " << sockfd << '\n';
             state_ = State::Closed;
             break;
         }
         data_left -= bytes_write;
     }
+    return RC_SUCCESS;
 }
 
 // Never used by server, only for client
-void Connection::readBlocking()
+RC Connection::readBlocking()
 {
-    int sockfd = sock->getFd();
-    unsigned int rcv_size = 0;
-    socklen_t len = sizeof(rcv_size);
-    getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &rcv_size, &len);
-    char buf[rcv_size];
+    int sockfd = socket_->getFd();
+    size_t data_size = socket_->recvBufSize();
+    char buf[1024];
     ssize_t bytes_read = ::read(sockfd, buf, sizeof(buf));
     if (bytes_read > 0)
     {
@@ -153,31 +166,33 @@ void Connection::readBlocking()
     }
     else if (bytes_read == 0)
     {
-        printf("read EOF, blocking client fd %d disconnected\n", sockfd);
+        std::cout << "read EOF, blocking client fd " << sockfd << " disconnected\n";
         state_ = State::Closed;
     }
     else if (bytes_read == -1)
     {
-        printf("Other error on blocking client fd %d\n", sockfd);
+        std::cout << "Other error on blocking client fd " << sockfd << '\n';
         state_ = State::Closed;
     }
+    return RC_SUCCESS;
 }
 
 // Never used by server, only for client
-void Connection::writeBlocking()
+RC Connection::writeBlocking()
 {
-    int sockfd = sock->getFd();
+    int sockfd = socket_->getFd();
     ssize_t bytes_write = ::write(sockfd, sendBuffer_->c_str(), sendBuffer_->size());
     if (bytes_write == -1)
     {
-        printf("Other error on blocking client fd %d\n", sockfd);
+        std::cout << "Other error on blocking client fd " << sockfd << '\n';
         state_ = State::Closed;
     }
+    return RC_SUCCESS;
 }
 
 void Connection::close()
 {
-    deleteConnectionCallback(sock);
+    deleteConnectionCallback(socket_->getFd());
 }
 
 Connection::State Connection::getState() const
@@ -192,48 +207,39 @@ void Connection::setSendBuffer(const char *str)
 
 Buffer *Connection::getReadBuffer() const
 {
-    return readBuffer_;
-}
-
-const char *Connection::readBuffer() const
-{
-    return readBuffer_->c_str();
+    return readBuffer_.get();
 }
 
 Buffer *Connection::getSendBuffer() const
 {
-    return sendBuffer_;
+    return sendBuffer_.get();
 }
 
-const char *Connection::sendBuffer() const
-{
-    return sendBuffer_->c_str();
-}
-
-void Connection::setDeleteConnectionCallback(std::function<void(Socket *)> const &callback)
+void Connection::setDeleteConnectionCallback(std::function<void(int)> const &callback)
 {
     deleteConnectionCallback = callback;
 }
 
-void Connection::setOnConnectCallback(std::function<void(Connection *)> const &callback)
+void Connection::setDeleteConnectionCallback(std::function<void(int)> &&callback)
 {
-    onConnectCallback = callback;
-    channel->setReadCallback([this]() { onConnectCallback(this); });
+    deleteConnectionCallback = std::move(callback);
 }
 
-void Connection::setOnMessageCallback(std::function<void(Connection *)> const &callback)
+void Connection::setOnRecvCallback(std::function<void(Connection *)> const &callback)
 {
-    onMessageCallback = callback;
+    onRecvCallback = callback;
     std::function<void()> bus = std::bind(&Connection::business, this);
-    channel->setReadCallback(bus);
+    channel_->setReadCallback(bus);
 }
 
-void Connection::getlineSendBuffer()
+void Connection::setOnRecvCallback(std::function<void(Connection *)> &&callback)
 {
-    sendBuffer_->getline();
+    onRecvCallback = std::move(callback);
+    std::function<void()> bus = std::bind(&Connection::business, this);
+    channel_->setReadCallback(bus);
 }
 
 Socket *Connection::getSocket() const
 {
-    return sock;
+    return socket_.get();
 }

@@ -3,17 +3,18 @@
 #include <csignal>
 #include <functional>
 #include <map>
-std::map<int, std::function<void()>> handlers;
+
+std::map<int, std::function<void()>> handlers_;
 void signalHandler(int sig)
 {
-    handlers[sig]();
+    handlers_[sig]();
 }
 
 struct Signal
 {
     static void signal(int sig, const std::function<void()> &handler)
     {
-        handlers[sig] = handler;
+        handlers_[sig] = handler;
         ::signal(sig, signalHandler);
     }
 };

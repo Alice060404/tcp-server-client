@@ -1,6 +1,7 @@
 #include "Poller.hpp"
 
 #include "Channel.hpp"
+#include "Macros.hpp"
 #include "Socket.hpp"
 #include "common.hpp"
 
@@ -10,45 +11,45 @@
 #include <unistd.h>
 #include <vector>
 
-constexpr std::size_t MAX_EVENTS = 1000;
+constexpr const std::size_t MAX_EVENTS = 1000;
 
-#ifdef OS_LINUX
+#if defined(OS_LINUX) || defined(__linux__)
 
 Poller::Poller()
 {
-    fd = epoll_create1(0);
-    common::exception::throw_if(fd == -1, "Epoll create error");
-    events = new epoll_event[MAX_EVENTS];
-    memset(events, 0, sizeof(*events) * MAX_EVENTS);
+    fd_ = epoll_create1(0);
+    common::exception::throw_if(fd_ == -1, "Epoll create error");
+    events_ = new epoll_event[MAX_EVENTS];
+    memset(events_, 0, sizeof(*events_) * MAX_EVENTS);
 }
 
 Poller::~Poller()
 {
-    if (fd != -1)
+    if (fd_ != -1)
     {
-        close(fd);
+        close(fd_);
     }
-    delete[] events;
+    delete[] events_;
 }
 
-std::vector<Channel *> Poller::poll(int timeout)
+std::vector<Channel *> Poller::poll(int timeout) const
 {
     std::vector<Channel *> active_channels;
-    int nfds = epoll_wait(fd, events, MAX_EVENTS, timeout);
+    int nfds = epoll_wait(fd_, events_, MAX_EVENTS, timeout);
     common::exception::throw_if(nfds == -1, "epoll wait error");
     for (int i = 0; i < nfds; ++i)
     {
-        Channel *ch = (Channel *)events[i].data.ptr;
-        int events_ = events[i].events;
-        if (events_ & EPOLLIN)
+        Channel *ch = (Channel *)events_[i].data.ptr;
+        int events = events_[i].events;
+        if (events & EPOLLIN)
         {
             ch->setReadyEvents(Channel::READ_EVENT);
         }
-        if (events_ & EPOLLOUT)
+        if (events & EPOLLOUT)
         {
             ch->setReadyEvents(Channel::WRITE_EVENT);
         }
-        if (events_ & EPOLLET)
+        if (events & EPOLLET)
         {
             ch->setReadyEvents(Channel::ET);
         }
@@ -57,12 +58,10 @@ std::vector<Channel *> Poller::poll(int timeout)
     return active_channels;
 }
 
-void Poller::updateChannel(Channel *ch)
+RC Poller::updateChannel(Channel *ch) const
 {
-    int sockfd = ch->getSocket()->getFd();
-    struct epoll_event ev
-    {
-    };
+    int sockfd = ch->getFd();
+    struct epoll_event ev{};
     ev.data.ptr = ch;
     if (ch->getListenEvents() & Channel::READ_EVENT)
     {
@@ -78,20 +77,22 @@ void Poller::updateChannel(Channel *ch)
     }
     if (!ch->getExist())
     {
-        common::exception::throw_if(epoll_ctl(fd, EPOLL_CTL_ADD, sockfd, &ev) == -1, "epoll add error");
+        common::exception::throw_if(epoll_ctl(fd_, EPOLL_CTL_ADD, sockfd, &ev) == -1, "epoll add error");
         ch->setExist();
     }
     else
     {
-        common::exception::throw_if(epoll_ctl(fd, EPOLL_CTL_MOD, sockfd, &ev) == -1, "epoll modify error");
+        common::exception::throw_if(epoll_ctl(fd_, EPOLL_CTL_MOD, sockfd, &ev) == -1, "epoll modify error");
     }
+    return RC_SUCCESS;
 }
 
-void Poller::deleteChannel(Channel *ch)
+RC Poller::deleteChannel(Channel *ch) const
 {
-    int sockfd = ch->getSocket()->getFd();
-    common::exception::throw_if(epoll_ctl(fd, EPOLL_CTL_DEL, sockfd, nullptr) == -1, "epoll delete error");
+    int sockfd = ch->getFd();
+    common::exception::throw_if(epoll_ctl(fd_, EPOLL_CTL_DEL, sockfd, nullptr) == -1, "epoll delete error");
     ch->setExist(false);
+    return RC_SUCCESS;
 }
 
 #endif

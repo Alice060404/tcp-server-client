@@ -2,30 +2,34 @@
 
 #include "Macros.hpp"
 
+#include <cstddef>
 #include <cstdint>
-
-class InetAddress;
+#include <string>
 
 class Socket
 {
   public:
     Socket();
-    explicit Socket(int socketFd);
     ~Socket();
 
     DISALLOW_COPY_AND_MOVE(Socket)
 
-    void bind(InetAddress *addr);
-    void listen();
-    void setNonBlocking();
+    void setFd(int fd);
+
+    RC create();
+    RC bind(const char *ip, uint16_t port);
+    RC listen() const;
+    RC setNonBlocking() const;
     bool isNonBlocking() const;
 
-    int accept(InetAddress *addr);
-    void connect(InetAddress *addr);
-    void connect(const char *ip, uint16_t port);
+    RC accept(int &clntFd) const;
+    RC connect(const char *ip, uint16_t port) const;
+
+    size_t recvBufSize() const;
 
     int getFd() const;
+    std::string getAddr() const;
 
   private:
-    int fd{-1};
+    int fd_;
 };

@@ -1,3 +1,4 @@
+#include "Buffer.hpp"
 #include "Connection.hpp"
 #include "NetworkConfig.hpp"
 #include "Socket.hpp"
@@ -12,11 +13,12 @@
 void oneClient(int messageCount, int waitSeconds)
 {
     Socket *sock = new Socket();
+    sock->create();
     sock->connect(network_config::IP, network_config::PORT);
 
-    Connection *conn = new Connection(nullptr, sock);
-
+    Connection *conn = new Connection(sock->getFd(), nullptr);
     sleep(waitSeconds);
+
     int count = 0;
     while (count < messageCount)
     {
@@ -28,8 +30,9 @@ void oneClient(int messageCount, int waitSeconds)
             break;
         }
         conn->read();
-        std::cout << "msg count " << count++ << ": " << conn->readBuffer() << '\n';
+        std::cout << "msg count " << count++ << ": " << conn->getReadBuffer()->c_str() << '\n';
     }
+    delete sock;
     delete conn;
 }
 

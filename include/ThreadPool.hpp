@@ -2,6 +2,7 @@
 
 #include "Macros.hpp"
 
+#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <future>
@@ -26,30 +27,30 @@ class ThreadPool
     auto add(F &&f, Args &&...args) -> std::future<typename std::invoke_result_t<F, Args...>>;
 
   private:
-    std::vector<std::thread> threads;
-    std::queue<std::function<void()>> tasks;
-    std::mutex taskMtx;
-    std::condition_variable cv;
-    bool stop{false};
+    std::vector<std::thread> workers_;
+    std::queue<std::function<void()>> tasks_;
+    std::mutex queueMutex_;
+    std::condition_variable cv_;
+    std::atomic<bool> stop_{false};
 };
 
 template <typename F, typename... Args>
 auto ThreadPool::add(F &&f, Args &&...args) -> std::future<std::invoke_result_t<F, Args...>>
 {
-    using ReturnType = std::invoke_result_t<F, Args...>;
+    using returnType = std::invoke_result_t<F, Args...>;
 
     auto task =
-        std::make_shared<std::packaged_task<ReturnType()>>(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+        std::make_shared<std::packaged_task<returnType()>>(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
 
-    std::future<ReturnType> future = task->get_future();
+    std::future<returnType> res = task->get_future();
     {
-        std::unique_lock<std::mutex> lock(taskMtx);
-        if (stop)
+        std::unique_lock<std::mutex> lock(queueMutex_);
+        if (stop_)
         {
             throw std::runtime_error("Enqueue on stopped ThreadPool");
         }
-        tasks.emplace([task]() { (*task)(); });
+        tasks_.emplace([task]() { (*task)(); });
     }
-    cv.notify_one();
-    return future;
+    cv_.notify_one();
+    return res;
 }

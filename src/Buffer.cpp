@@ -1,42 +1,40 @@
 #include "Buffer.hpp"
 
-#include <iostream>
 #include <string>
 #include <sys/types.h>
 
-void Buffer::append(const char *data, int length)
+const std::string &Buffer::buf() const
 {
-    for (int i = 0; i < length; ++i)
+    return buf_;
+}
+
+void Buffer::append(const char *str, int size)
+{
+    for (int i = 0; i < size; ++i)
     {
-        if (data[i] == '\0')
+        if (str[i] == '\0')
             break;
-        buf.push_back(data[i]);
+        buf_.push_back(str[i]);
     }
 }
 
-ssize_t Buffer::size() const
+size_t Buffer::size() const
 {
-    return buf.size();
+    return buf_.size();
 }
 
 const char *Buffer::c_str() const
 {
-    return buf.c_str();
+    return buf_.c_str();
 }
 
 void Buffer::clear()
 {
-    buf.clear();
+    buf_.clear();
 }
 
-void Buffer::getline()
+void Buffer::setBuf(const char *buf)
 {
-    buf.clear();
-    std::getline(std::cin, buf);
-}
-
-void Buffer::setBuf(const char *data)
-{
-    buf.clear();
-    buf.append(data);
+    std::string newBuf(buf);
+    buf_.swap(newBuf);
 }

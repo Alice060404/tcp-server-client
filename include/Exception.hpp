@@ -36,7 +36,7 @@ class Exception : public std::runtime_error
         case ExceptionType::INVALID_SOCKET:
             return "Invalid socket";
         default:
-            return "Unknow";
+            return "Unknown";
         }
     }
 

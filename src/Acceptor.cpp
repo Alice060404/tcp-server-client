@@ -1,42 +1,46 @@
 #include "Acceptor.hpp"
 
 #include "Channel.hpp"
-#include "InetAddress.hpp"
+#include "Macros.hpp"
 #include "NetworkConfig.hpp"
 #include "Socket.hpp"
 
+#include <cassert>
+#include <fcntl.h>
 #include <functional>
+#include <memory>
 
-Acceptor::Acceptor(EventLoop *eventLoop) : loop(eventLoop), sock(nullptr), acceptChannel(nullptr)
+Acceptor::Acceptor(EventLoop *loop)
 {
-    sock = new Socket();
-    InetAddress *addr = new InetAddress(network_config::IP, network_config::PORT);
-    sock->bind(addr);
-    sock->listen();
-    acceptChannel = new Channel(loop, sock);
+    socket_ = std::make_unique<Socket>();
+    assert(socket_->create() == RC_SUCCESS);
+    assert(socket_->bind(network_config::IP, network_config::PORT) == RC_SUCCESS);
+    assert(socket_->listen() == RC_SUCCESS);
+
+    channel_ = std::make_unique<Channel>(socket_->getFd(), loop);
     std::function<void()> cb = std::bind(&Acceptor::acceptConnection, this);
-    acceptChannel->setReadCallback(cb);
-    acceptChannel->enableRead();
-    delete addr;
+
+    channel_->setReadCallback(cb);
+    channel_->enableRead();
 }
 
 Acceptor::~Acceptor()
 {
-    delete acceptChannel;
-    delete sock;
 }
 
-void Acceptor::acceptConnection()
+RC Acceptor::acceptConnection() const
 {
-    InetAddress *clientAddr = new InetAddress();
-    Socket *clientSock = new Socket(sock->accept(clientAddr));
-    clientSock->setNonBlocking();
-    if (newConnectionCallback)
-        newConnectionCallback(clientSock);
-    delete clientAddr;
+    int clntFd = -1;
+    if (socket_->accept(clntFd) != RC_SUCCESS)
+        return RC_ACCEPTOR_ERROR;
+
+    fcntl(clntFd, F_SETFL, fcntl(clntFd, F_GETFL) | O_NONBLOCK);
+    if (newConnectionCallback_)
+        newConnectionCallback_(clntFd);
+    return RC_SUCCESS;
 }
 
-void Acceptor::setNewConnectionCallback(std::function<void(Socket *)> const &callback)
+void Acceptor::setNewConnectionCallback(std::function<void(int)> const &callback)
 {
-    newConnectionCallback = callback;
+    newConnectionCallback_ = callback;
 }

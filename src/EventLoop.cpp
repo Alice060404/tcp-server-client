@@ -3,42 +3,34 @@
 #include "Channel.hpp"
 #include "Poller.hpp"
 
-#include <vector>
+#include <memory>
 
 EventLoop::EventLoop()
 {
-    poller_ = new Poller();
+    poller_ = std::make_unique<Poller>();
 }
 
 EventLoop::~EventLoop()
 {
-    quit();
-    delete poller_;
 }
 
-void EventLoop::Loop()
+void EventLoop::Loop() const
 {
-    while (!quit_)
+    while (true)
     {
-        std::vector<Channel *> channels = poller_->poll();
-        for (auto &ch : channels)
+        for (Channel *activeChannel : poller_->poll())
         {
-            ch->handleEvent();
+            activeChannel->handleEvent();
         }
     }
 }
 
-void EventLoop::quit()
-{
-    quit_ = true;
-}
-
-void EventLoop::updateChannel(Channel *channel)
+void EventLoop::updateChannel(Channel *channel) const
 {
     poller_->updateChannel(channel);
 }
 
-void EventLoop::deleteChannel(Channel *channel)
+void EventLoop::deleteChannel(Channel *channel) const
 {
     poller_->deleteChannel(channel);
 }

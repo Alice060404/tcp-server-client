@@ -3,6 +3,7 @@
 #include "Macros.hpp"
 
 #include <functional>
+#include <memory>
 
 class EventLoop;
 class Socket;
@@ -16,12 +17,11 @@ class Acceptor
 
     DISALLOW_COPY_AND_MOVE(Acceptor)
 
-    void setNewConnectionCallback(std::function<void(Socket *)> const &callback);
-    void acceptConnection();
+    void setNewConnectionCallback(std::function<void(int)> const &callback);
+    RC acceptConnection() const;
 
   private:
-    EventLoop *loop;
-    Socket *sock;
-    Channel *acceptChannel;
-    std::function<void(Socket *)> newConnectionCallback;
+    std::unique_ptr<Socket> socket_;
+    std::unique_ptr<Channel> channel_;
+    std::function<void(int)> newConnectionCallback_;
 };

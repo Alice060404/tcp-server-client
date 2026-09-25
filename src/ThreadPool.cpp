@@ -8,17 +8,17 @@ ThreadPool::ThreadPool(unsigned int size)
 {
     for (unsigned int i = 0; i < size; ++i)
     {
-        threads.emplace_back(std::thread([this]() {
+        workers_.emplace_back(std::thread([this]() {
             while (true)
             {
                 std::function<void()> task;
                 {
-                    std::unique_lock<std::mutex> lock(taskMtx);
-                    cv.wait(lock, [this]() { return stop || !tasks.empty(); });
-                    if (stop && tasks.empty())
+                    std::unique_lock<std::mutex> lock(queueMutex_);
+                    cv_.wait(lock, [this]() { return stop_ || !tasks_.empty(); });
+                    if (stop_ && tasks_.empty())
                         return;
-                    task = tasks.front();
-                    tasks.pop();
+                    task = tasks_.front();
+                    tasks_.pop();
                 }
                 task();
             }
@@ -29,11 +29,11 @@ ThreadPool::ThreadPool(unsigned int size)
 ThreadPool::~ThreadPool()
 {
     {
-        std::unique_lock<std::mutex> lock(taskMtx);
-        stop = true;
+        std::unique_lock<std::mutex> lock(queueMutex_);
+        stop_ = true;
     }
-    cv.notify_all();
-    for (std::thread &thr : threads)
+    cv_.notify_all();
+    for (std::thread &thr : workers_)
     {
         if (thr.joinable())
             thr.join();
